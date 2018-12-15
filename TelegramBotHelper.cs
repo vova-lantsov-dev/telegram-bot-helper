@@ -28,11 +28,11 @@ namespace Telegram.Bot.Helper
             }
         }
 
-        private readonly TelegramBotClient _telegram;
+        public readonly TelegramBotClient Client;
 
-        private readonly List<BotInline> _inlineCallbacks = new List<BotInline>();
-        private readonly List<BotTextMessage> _messageCallbacks = new List<BotTextMessage>();
-        private readonly List<BotExpression> _expressionCallbacks = new List<BotExpression>();
+        private List<BotInline> _inlineCallbacks = new List<BotInline>();
+        private List<BotTextMessage> _messageCallbacks = new List<BotTextMessage>();
+        private List<BotExpression> _expressionCallbacks = new List<BotExpression>();
 
         /// <summary>
         /// You can create your own update handler using this delegate.
@@ -56,8 +56,8 @@ namespace Telegram.Bot.Helper
             if (separator == string.Empty)
                 throw new ArgumentException("Separator cannot be empty string", "separator");
 
-            _telegram = initializer();
-            if (_telegram == null)
+            Client = initializer();
+            if (Client == null)
                 throw new ArgumentException("Initializer must return not null client", "initializer");
 
             if (separator != null)
@@ -109,7 +109,7 @@ namespace Telegram.Bot.Helper
                                 {
                                     foreach (var expressionCallback in _expressionCallbacks)
                                     {
-                                        if (!await expressionCallback.Expression(message))
+                                        if (!expressionCallback.Expression(message))
                                             continue;
 
                                         if (expressionCallback.Verified != Verify.Unchecked
@@ -149,15 +149,15 @@ namespace Telegram.Bot.Helper
 
         public void Inlines(Action<BotInline.Builder> builder)
         {
-            builder(new BotInline.Builder(_inlineCallbacks));
+            builder(new BotInline.Builder(ref _inlineCallbacks));
         }
         public void Messages(Action<BotTextMessage.Builder> builder)
         {
-            builder(new BotTextMessage.Builder(_messageCallbacks));
+            builder(new BotTextMessage.Builder(ref _messageCallbacks));
         }
         public void Expressions(Action<BotExpression.Builder> builder)
         {
-            builder(new BotExpression.Builder(_expressionCallbacks));
+            builder(new BotExpression.Builder(ref _expressionCallbacks));
         }
     }
 }

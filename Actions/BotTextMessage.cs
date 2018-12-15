@@ -21,7 +21,7 @@ namespace Telegram.Bot.Helper.Actions
         public class Builder
         {
             public readonly List<BotTextMessage> _messages;
-            internal Builder(List<BotTextMessage> messages) => _messages = messages;
+            internal Builder(ref List<BotTextMessage> messages) => _messages = messages;
             
             public Func<Message, Verify, Task> this[string message, Verify verified = Verify.Unchecked]
             {

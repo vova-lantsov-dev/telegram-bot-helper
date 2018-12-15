@@ -20,7 +20,7 @@ namespace Telegram.Bot.Helper.Actions
         public class Builder
         {
             public readonly List<BotInline> Callbacks;
-            internal Builder(List<BotInline> callbacks)
+            internal Builder(ref List<BotInline> callbacks)
             {
                 Callbacks = callbacks;
             }
