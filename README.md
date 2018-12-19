@@ -115,4 +115,118 @@ i["delete~order~ "] = async (q, c, _) =>
 	await _c.SendTextMessageAsync(q.ChatId, $"Order with id {c[2]} was successfully deleted.");
 };
 ```
+#### Handle message expressions
+```c#
+public void Initialize()
+{
+	_helper.Expressions(e =>
+	{
+		e[m => m.Type == MessageType.Text && m.Text.StartsWith("/start")] = async (m, _) =>
+		{
+			string[] parameters = m.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parameters.Length == 1)
+				return;
+			
+			for (int i = 1; i < parameters.Length; i++)
+			{
+				await _c.SendTextMessageAsync(m.Chat.Id, $"Parameter {i} = {parameters[i]}")
+			}
+		};
+		_m[m => m.Type == MessageType.Location] = async (m, _) =>
+		{
+			await _c.SendTextMessageAsync(m.Chat.Id, $"Location received.\nLongitude: {m.Location.Longitude}\n"
+				+ $"Latitude: {m.Location.Latitude}");
+		};
+	});
+}
+```
+**e** is expression builder.  
+**m** is original `Telegram.Bot.Types.Message` object.
+#### Start our bot
+In Program.cs file add next lines inside Main method:
+```c#
+BotClient client = new BotClient("your bot's token here, write to @BotFather to generate it");
+client.Start();
+Console.WriteLine("Bot is running...");
+Console.ReadKey();
+client.Stop();
+```
+Now start your console application.
+## Verification
+Access restrictions can be made using the following functionality:
+```c#
+public void Initialize()
+{
+	_helper.Verifying = async u =>
+	{
+		var userInfo = await _context.UserInfo.Find(info => info.UserId == u.Id).SingleOrDefaultAsync();
+		if (userInfo == null)
+			return Verify.Unknown;
+		
+		return userInfo.Authorized ? Verify.Verified : Verify.Unverified;
+	};
+	_helper.Messages(_m =>
+	{
+		_m["/start", Verify.Unknown] = async (m, v) =>
+		{
+			// Code here will run for unknown users only
+		};
+		_m["Restricted", Verify.Unverified] = async (m, v) =>
+		{
+			// Code here will run for unverified users only
+		};
+		_m["About us", Verify.Verified | Verify.Unverified] = async (m, v) =>
+		{
+			// Code here will run for verified and unverified users only
+			
+			if (v == Verify.Verified)
+				Console.WriteLine("User is verified");
+			else Console.WriteLine("User is unverified");
+		};
+		_m["Contact us"] = async (m, v) =>
+		{
+			// Code here will run for all users
+		};
+	});
+	_helper.Expressions(e =>
+	{
+		_m[m => m.Type == MessageType.Location, Verify.Verified] = async (m, v) =>
+		{
+			// Code here will run for verified users only
+		};
+	});
+}
+```
+Verifying delegate is used for verification of user. For example, you can check user's access level in database and return Verify enum value. In your code you can be sure that user has access only to allowed areas so additional checks are redundant.  
+In my opinion `Verify.Unknown` represents users who have never written to bot before, `Verify.Unverified` - have already written to bot, but they haven't logged in or sent phone number/location, `Verify.Verified` - users who have full access to bot.
+## Keyboards
+```c#
+var b = new Builder<KeyboardButton>();
+for (int i = 0; i < 20; i++)
+{
+	b.B("Button").B("Button with location", requestLocation: true)
+  		.B("Button with contact", requestContact: true)
+		.B(new KeyboardButton("Test"));
+	if (i != 19) b.L();
+}
+await _c.SendTextMessageAsync(m.Chat, "Keyboard test", replyMarkup: b.M().RK().OTK());
+```
+```c#
+var b = new Builder<InlineKeyboardButton>();
+for (int i = 0; i < 20; i++)
+{
+	b.B("Text", "callback~data")
+		.B("Text", "callback~data")
+  		.B("Button with url", null, url: "https://www.google.com/")
+		.B(new InlineKeyboardButton { Text = "Button text", ... });
+	if (i != 19) b.L();
+}
+await _c.SendTextMessageAsync(m.Chat, "Keyboard test", replyMarkup: b.M());
+```
+**b** is markup builder for KeyboardButtons or InlineKeyboardButtons.  
+**b.B()** adds new button to current row  
+**b.L()** moves builder to new row  
+**b.M()** builds markup  
+**markup.RK()** sets ResizeKeyboard property to specified value (default value is true; to set false - `markup.RK(false)`). This method exists only for KeyboardButton's builder  
+**markup.OTK()** sets OneTimeKeyboard property to specified value (default value is true; to set false - `markup.OTK(false)`). This method exists only for KeyboardButton's builder
 ## Other docs coming soon
