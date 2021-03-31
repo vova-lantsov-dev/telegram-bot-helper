@@ -1,24 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
-    <Version>1.0.3</Version>
-    <Authors>Vova Lantsov</Authors>
-    <PackageLicenseUrl>https://github.com/vova-lantsov-dev/telegram-bot-helper/blob/master/LICENSE</PackageLicenseUrl>
-    <Description>Reduce development time with helper for Telegram.Bot library.</Description>
-    <RepositoryUrl>https://github.com/vova-lantsov-dev/telegram-bot-helper.git</RepositoryUrl>
-    <PackageTags>Telegram, Telegram.Bot</PackageTags>
+    <Version>2.0.0</Version>
+    <PackageId>Telegram.Bot.Helper</PackageId>
+    <Authors>vova-lantsov-dev</Authors>
+    <Company>Vova Lantsov</Company>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Reduce development time of telegram bots with this awesome helper for Telegram.Bot library.</Description>
+    <RepositoryUrl>https://github.com/vova-lantsov-dev/telegram-bot-helper</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>Telegram;Telegram.Bot;Bot</PackageTags>
     <PackageProjectUrl>https://github.com/vova-lantsov-dev/telegram-bot-helper</PackageProjectUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>D:\Projects\Work\Bot\Telegram.Bot.Helper\Telegram.Bot.Helper.xml</DocumentationFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Description>
+      This is a simple library for running advanced bots without need to manage the access manually or to write the boilerplate code for our daily tasks.
+    </Description>
+    <PackageReleaseNotes>
+      Version 2.0.0
+      
+      - Target framework changed from netcoreapp1.1 to netcoreapp2.0
+      - Minimal version of Telegram.Bot library is now 15.6.0
+      - Improved asynchronous code support (not using events anymore)
+      - Added support for Dependency Injection feature
+      - Other minor improvements
+    </PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Telegram.Bot" Version="14.10.0" />
+    <PackageReference Include="Telegram.Bot.Extensions.Polling" Version="0.2.0" />
   </ItemGroup>
 
 </Project>
