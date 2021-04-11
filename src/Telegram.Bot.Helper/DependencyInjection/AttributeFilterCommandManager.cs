@@ -43,6 +43,16 @@ namespace Telegram.Bot.Helper.DependencyInjection
             IServiceScope scope = ServiceProvider.CreateScope();
             foreach (var commandMetadata in _metadataInfo)
             {
+                bool skip = false;
+                foreach (var attributeMetadata in commandMetadata.Attributes)
+                {
+                    var filterAttribute = attributeMetadata.CreateAttributeFunc(ServiceProvider);
+                    // ReSharper disable once MethodHasAsyncOverload
+                    if (!filterAttribute.IsValid() || !await filterAttribute.IsValidAsync())
+                        skip = true;
+                }
+                if (skip)
+                    continue;
                 var attributes =
                     commandMetadata.Attributes.Select(att => att.CreateAttributeFunc(ServiceProvider)).ToArray();
 
