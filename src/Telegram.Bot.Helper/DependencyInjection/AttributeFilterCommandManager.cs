@@ -53,11 +53,6 @@ namespace Telegram.Bot.Helper.DependencyInjection
                 }
                 if (skip)
                     continue;
-                var attributes =
-                    commandMetadata.Attributes.Select(att => att.CreateAttributeFunc(ServiceProvider)).ToArray();
-
-                if (!attributes.All(att => att.IsValid()))
-                    continue;
 
                 var command = (TelegramCommand) ActivatorUtilities.CreateInstance(scope.ServiceProvider, commandMetadata.CommandType);
                 command.Update = update;
