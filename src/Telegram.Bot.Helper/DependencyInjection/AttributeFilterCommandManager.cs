@@ -17,25 +17,24 @@ namespace Telegram.Bot.Helper.DependencyInjection
     internal sealed class AttributeFilterCommandManager : ITelegramBotCommandManager
     {
         private readonly ReadOnlyCollection<CommandMetadata> _metadataInfo;
+        private readonly ReadOnlyCollection<AttributeMetadata> _attributeMetadataInfo;
         
         internal IServiceProvider ServiceProvider { private get; set; }
 
         public AttributeFilterCommandManager(
             IOptions<TelegramBotOptions> options)
         {
-            string[] assemblies = options.Value.Assemblies;
-            assemblies = assemblies == null
-                ? new[] {GetType().Assembly.GetName().Name}
-                : assemblies.Append(GetType().Assembly.GetName().Name).Distinct().ToArray();
-
-            Assembly[] assemblyTypes = assemblies.Select(Assembly.Load).ToArray();
+            Assembly[] assemblyTypes = options.Value.Assemblies;
             
             var metadataInfo = new List<CommandMetadata>();
+            var attributeMetadataInfo = new List<AttributeMetadata>();
             foreach (var assembly in assemblyTypes)
             {
                 AddCommandMetadataForAssembly(assembly, metadataInfo);
+                AddAttributeMetadataForAssembly(assembly, attributeMetadataInfo);
             }
             _metadataInfo = metadataInfo.AsReadOnly();
+            _attributeMetadataInfo = attributeMetadataInfo.AsReadOnly();
         }
         
         public async ValueTask<TelegramCommand> GetCommandForUpdateAsync(Update update, CancellationToken ct)
@@ -44,8 +43,13 @@ namespace Telegram.Bot.Helper.DependencyInjection
             foreach (var commandMetadata in _metadataInfo)
             {
                 bool skip = false;
-                foreach (var attributeMetadata in commandMetadata.Attributes)
+                foreach (var filterAttributeType in commandMetadata.FilterAttributes)
                 {
+                    var attributeMetadata =
+                        _attributeMetadataInfo.FirstOrDefault(it => it.AttributeType == filterAttributeType);
+                    if (attributeMetadata == null)
+                        // TODO
+                        throw new NotImplementedException();
                     var filterAttribute = attributeMetadata.CreateAttributeFunc(ServiceProvider);
                     // ReSharper disable once MethodHasAsyncOverload
                     if (!filterAttribute.IsValid() || !await filterAttribute.IsValidAsync())
@@ -79,13 +83,26 @@ namespace Telegram.Bot.Helper.DependencyInjection
                 var commandMetadata = new CommandMetadata
                 {
                     CommandType = commandType,
-                    Attributes = commandType.GetCustomAttributesData()
-                        .Where(it =>
-                            !it.AttributeType.IsAbstract &&
-                            typeof(TelegramBotFilterAttribute).IsAssignableFrom(it.AttributeType))
-                        .Select(it => GetMetadataForAttribute(it.AttributeType)).ToList()
+                    FilterAttributes = commandType.GetCustomAttributesData()
+                        .Select(it => it.AttributeType)
+                        .Where(t => typeof(TelegramBotFilterAttribute).IsAssignableFrom(t))
+                        .ToList()
                 };
                 list.Add(commandMetadata);
+            }
+        }
+
+        private static void AddAttributeMetadataForAssembly(Assembly assembly, List<AttributeMetadata> list)
+        {
+            var types = assembly.GetTypes();
+            var attributeFilterTypes = types.Where(t =>
+                t.IsClass && !t.IsAbstract && t.IsPublic && typeof(TelegramBotFilterAttribute).IsAssignableFrom(t));
+            foreach (var attributeFilterType in attributeFilterTypes)
+            {
+                if (list.Any(it => it.AttributeType == attributeFilterType))
+                    continue;
+                var attributeFilterMetadata = GetMetadataForAttribute(attributeFilterType);
+                list.Add(attributeFilterMetadata);
             }
         }
 
@@ -95,7 +112,9 @@ namespace Telegram.Bot.Helper.DependencyInjection
             {
                 AttributeType = attributeType,
                 CreateAttributeFunc = serviceProvider =>
-                    (TelegramBotFilterAttribute) ActivatorUtilities.CreateInstance(serviceProvider, attributeType)
+                    (TelegramBotFilterAttribute) ActivatorUtilities.CreateInstance(serviceProvider, attributeType),
+                ParentAttributes = attributeType.GetCustomAttributesData().Select(it => it.AttributeType)
+                    .Where(t => typeof(TelegramBotFilterAttribute).IsAssignableFrom(t)).ToList()
             };
             return attributeMetadata;
         }
@@ -103,12 +122,13 @@ namespace Telegram.Bot.Helper.DependencyInjection
         private sealed class CommandMetadata
         {
             public Type CommandType { get; set; }
-            public List<AttributeMetadata> Attributes { get; set; }
+            public List<Type> FilterAttributes { get; set; }
         }
-        
-        private sealed class AttributeMetadata
+
+        internal sealed class AttributeMetadata
         {
             public Type AttributeType { get; set; }
+            public List<Type> ParentAttributes { get; set; }
             public Func<IServiceProvider, TelegramBotFilterAttribute> CreateAttributeFunc { get; set; }
         }
     }
